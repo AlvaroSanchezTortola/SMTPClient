@@ -1,5 +1,5 @@
 <?php
-
+$msg_status = "";
 function SocketConnect(){
 	set_time_limit(5);
 	 
@@ -44,6 +44,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
     echo "$first_name\n";
     echo "$comments\n";
+    $msg_status = "SENT!";
 }
 ?>
 
@@ -59,8 +60,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     </style>
 </head>
 <body>
-    <div class="wrapper" style="position:relative; top: 53%; left: 35%; margin-top: 11%; width: 500px;">
-    	<h2 style="color: white; font-weight: bold; text-align: center; margin-left: 130px;">Send a Mail</h2>
+    <div class="wrapper" style="position:relative; top: 53%; left: 35%; margin-top: 8%; width: 500px;">
+    	<h2 style="color: white; text-shadow:0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black; font-weight: bold; text-align: center; margin-left: 130px;">Send a Mail</h2>
     	<p style="color: white; text-align: left">Fill the inputs, and press Send Mail when you are ready!.</p>
     	<form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
     	<table width="550px">
@@ -106,12 +107,12 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     	</tr>
     	<tr>
     	 <td colspan="2" style="text-align:center">
-    	  <input type="submit" class="btn btn-primary" value="Send Mail">
+    	  <input style="position: relative; left: 80px; width: 200px;" type="submit" class="btn btn-primary" value="Send Mail">
     	 </td>
     	</tr>
     	</table>
     	</form>
-
+    	<span style="position: relative;left: 70%;font-weight: bold; color: #4cda4f;" class="text-success"><?php echo $msg_status; ?></span>
     </div>    
 </body>
 </html>
