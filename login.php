@@ -78,29 +78,29 @@
         <title>Login</title>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.css">
         <style type="text/css">
-            body{ font: 14px sans-serif; }
+            body{ font: 14px sans-serif;  background-image: url("background.png");  background-color: #cccccc;}
             .wrapper{ width: 350px; padding: 20px; }
         </style>
     </head>
     <body>
-        <div class="wrapper">
-            <h2>Login</h2>
-            <p>Ingresa tus credenciales para iniciar sesion.</p>
+        <div class="wrapper" style="position:relative; top: 53%; left: 37%; margin-top: 6%;">
+            <h2 style="color: white;">Login</h2>
+            <p style="color: white;">Ingresa tus credenciales para iniciar sesion.</p>
             <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
                 <div class="form-group <?php echo (!empty($username_err)) ? 'has-error' : ''; ?>">
-                    <label>Username</label>
+                    <label style="color: white;">Username</label>
                     <input type="text" name="username"class="form-control" value="<?php echo $username; ?>">
                     <span class="help-block"><?php echo $username_err; ?></span>
                 </div>    
                 <div class="form-group <?php echo (!empty($password_err)) ? 'has-error' : ''; ?>">
-                    <label>Password</label>
+                    <label style="color: white;">Password</label>
                     <input type="password" name="password" class="form-control">
                     <span class="help-block"><?php echo $password_err; ?></span>
                 </div>
                 <div class="form-group">
                     <input type="submit" class="btn btn-primary" value="Login">
                 </div>
-                <p>No tienes cuenta? <a href="register.php">Registrate</a>.</p>
+                <p style="color: white;">No tienes cuenta? <a href="register.php">Registrate</a>.</p>
             </form>
         </div>    
     </body>

@@ -1,42 +1,22 @@
+<?php
 
+// Include config file
+require_once 'config.php';
 
-    <?php
+// Define variables and initialize with empty values
+$username = $password = $confirm_password = "";
+$username_err = $password_err = $confirm_password_err = "";
 
-    // Include config file
+// Processing form data when form is submitted
+if($_SERVER["REQUEST_METHOD"] == "POST"){
 
-    require_once 'config.php';
-
-     
-
-    // Define variables and initialize with empty values
-
-    $username = $password = $confirm_password = "";
-
-    $username_err = $password_err = $confirm_password_err = "";
-
-     
-
-    // Processing form data when form is submitted
-
-    if($_SERVER["REQUEST_METHOD"] == "POST"){
-
-     
-
-        // Validate username
-
-        if(empty(trim($_POST["username"]))){
-
-            $username_err = "Please enter a username.";
-
-        } else{
-
-            // Prepare a select statement
-
-            $sql = "SELECT id FROM users WHERE username = ?";
-
-            
-
-            if($stmt = mysqli_prepare($link, $sql)){
+// Validate username
+if(empty(trim($_POST["username"]))){
+    $username_err = "Please enter a username.";
+    } else{
+        // Prepare a select statement
+        $sql = "SELECT id FROM users WHERE username = ?";
+        if($stmt = mysqli_prepare($link, $sql)){
 
                 // Bind variables to the prepared statement as parameters
 
@@ -204,7 +184,7 @@
 
         <style type="text/css">
 
-            body{ font: 14px sans-serif; }
+            body{ font: 14px sans-serif; background-image: url("background.png");  background-color: #cccccc;}
 
             .wrapper{ width: 350px; padding: 20px; }
 
@@ -214,17 +194,17 @@
 
     <body>
 
-        <div class="wrapper">
+        <div class="wrapper" style="position:relative; top: 53%; left: 37%; margin-top: 6%;">
 
-            <h2>Sign Up</h2>
+            <h2 style="color: white;">Sign Up</h2>
 
-            <p>Please fill this form to create an account.</p>
+            <p style="color: white;">Please fill this form to create an account.</p>
 
             <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
 
                 <div class="form-group <?php echo (!empty($username_err)) ? 'has-error' : ''; ?>">
 
-                    <label>Username</label>
+                    <label style="color: white;">Username</label>
 
                     <input type="text" name="username"class="form-control" value="<?php echo $username; ?>">
 
@@ -234,7 +214,7 @@
 
                 <div class="form-group <?php echo (!empty($password_err)) ? 'has-error' : ''; ?>">
 
-                    <label>Password</label>
+                    <label style="color: white;">Password</label>
 
                     <input type="password" name="password" class="form-control" value="<?php echo $password; ?>">
 
@@ -244,7 +224,7 @@
 
                 <div class="form-group <?php echo (!empty($confirm_password_err)) ? 'has-error' : ''; ?>">
 
-                    <label>Confirm Password</label>
+                    <label style="color: white;">Confirm Password</label>
 
                     <input type="password" name="confirm_password" class="form-control" value="<?php echo $confirm_password; ?>">
 
@@ -260,7 +240,7 @@
 
                 </div>
 
-                <p>Already have an account? <a href="login.php">Login here</a>.</p>
+                <p style="color: white;">Already have an account? <a href="login.php">Login here</a>.</p>
 
             </form>
 
