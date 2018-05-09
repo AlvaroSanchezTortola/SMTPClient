@@ -9,53 +9,97 @@ if(!isset($_SESSION['username']) || empty($_SESSION['username'])){
   exit;
 }
 
-
 $msg_status = "";
-function SocketConnect(){
+$server_ip = "127.0.0.1";
+$server_port = 666;
+
+function SocketConnect($server_ip, $server_port){
 	set_time_limit(5);
 	 
 	if (($socket = socket_create(AF_INET, SOCK_STREAM, 0)) === false) {
-	    die("Could not create socket\n");
+	    $msg_status = $msg_status . "Could not create socket\n";
 	}else{
-		echo "Socket created succesfuly!\n";
+		$msg_status = $msg_status . "Socket created succesfuly!\n";
 	}
 	 
-	if (($connection = socket_connect($socket, "127.0.0.1", 6666)) === false) {
-	    die("Could not connect to server\n");
+	if (($connection = socket_connect($socket, $server_ip, $server_port)) === false) {
+	    $msg_status = $msg_status . "Could not connect to server\n";
 	}else{
-		echo "Succesfully connected!!\n";
+		$msg_status = $msg_status . "Succesfully connected!!\n";
+        return $socket;
 	}
-	 
-	$data = "Hello World";
-	socket_write($socket, $data, strlen($data));
-	 
-	if (($data = socket_read($socket, 1024)) === false) {
-	    die("Could not read input\n");
-	} else {
-	    echo "Server sent: \"" . $data . "\"";
-	}
-	 
-	socket_close($socket);
+}
+
+function send($socket, $message){
+    socket_write($socket, $message, strlen($message));
+}
+
+function receive($socket){
+    if (($data = socket_read($socket, 1024)) === false) {
+        $msg_status = $msg_status . "Could not read input\n";
+        return 0;
+    } else {
+        //echo "Server sent:" . $data . "\n";
+        return $data;
+    }
 }
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
 	// validation expected data exists
-    if(!isset($_POST['first_name']) ||
-        !isset($_POST['last_name']) ||
-        !isset($_POST['email']) ||
-        !isset($_POST['telephone']) ||
-        !isset($_POST['comments'])) {
-        died('We are sorry, but there appears to be a problem with the form you submitted.');       
+    if(!isset($_POST['rcpt_to']) ||
+        !isset($_POST['subject']) ||
+        !isset($_POST['content'])) {
+        $msg_status = $msg_status . "We are sorry, but there appears to be a problem with the form you submitted\n";       
     }
-    $first_name = $_POST['first_name']; // required
-    $last_name = $_POST['last_name']; // required
-    $email_from = $_POST['email']; // required
-    $telephone = $_POST['telephone']; // not required
-    $comments = $_POST['comments']; // required
+    $rcpt_to = $_POST['rcpt_to']; // required
+    $subject = $_POST['subject']; // required
+    $content = $_POST['content']; // required
+    $mail_from = $_SESSION['username'];
 
-    echo "$first_name\n";
-    echo "$comments\n";
-    $msg_status = "SENT!";
+    $rcpt_to_array = explode(",",$rcpt_to);
+
+    // echo "From: "."$mail_from\n";
+    // echo "To: "."$rcpt_to\n";
+    // echo "Subject: "."$subject\n";
+    // echo "Content: "."$content\n";
+    
+    $server_socket = SocketConnect($server_ip, $server_port);
+
+    $data = receive($server_socket);
+    if (strpos($data, '220') !== false) {
+        //echo "Read 220\n";
+        send($server_socket, "HELO");
+        $data = receive($server_socket);
+        if (strpos($data, '250') !== false){
+            //echo "Read 250 HELO\n";
+            send($server_socket, "MAIL FROM:".$mail_from);
+            $data = receive($server_socket);
+            if (strpos($data, '250') !== false){
+                //echo "Read 250 MAIL FROM\n";
+                for($x = 0; $x < count($rcpt_to_array); $x++) {
+                    send($server_socket, "RCPT TO:".$rcpt_to_array[$x]);
+                    $data = receive($server_socket);
+                }
+                if (strpos($data, '250') !== false){
+                    //echo "Read 250 RCPT TO\n";
+                    send($server_socket, "DATA");
+                    $data = receive($server_socket);
+                    if (strpos($data, '354') !== false){
+                        //echo "Read 354 DATA";
+                        $mail_content = $subject."\n".$content;
+                        send($server_socket, $mail_content);
+                        send($server_socket, ".\r\n");
+                        $data = receive($server_socket);
+                        if (strpos($data, '250') !== false){
+                            //echo "Read 250 DONE!";
+                            $msg_status = $msg_status . "SENT!";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    socket_close($server_socket);
 }
 ?>
 
@@ -74,47 +118,31 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     <p><a style="position: absolute; left: 85%; top: 1%; width: 10em;" href="logout.php" class="btn btn-danger">Log Out</a></p>
     <div class="wrapper" style="position:relative; top: 53%; left: 30%; margin-top: 4%; width: 500px;">
     	<h2 style="color: white; text-shadow:0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black; font-weight: bold; text-align: center; margin-left: 130px;">Send a Mail</h2>
-    	<p style="color: white; text-align: left">Fill the inputs, and press Send Mail when you are ready!.</p>
+    	<p style="color: white; text-align: left">Please, separate mails with ",".</p>
     	<form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
     	<table width="550px">
     	<tr>
     	 <td valign="top">
-    	  <label style="color: white;" for="first_name">First Name *</label>
+    	  <label style="color: white;" for="rcpt_to">To:</label>
     	 </td>
     	 <td valign="top">
-    	  <input  class="form-control" type="text" name="first_name" maxlength="50" size="30">
+    	  <input  class="form-control" type="text" name="rcpt_to" maxlength="50" size="30">
     	 </td>
     	</tr>
     	<tr>
     	 <td valign="top"">
-    	  <label style="color: white;" for="last_name">Last Name *</label>
+    	  <label style="color: white;" for="subject">Subject:</label>
     	 </td>
     	 <td valign="top">
-    	  <input  class="form-control" type="text" name="last_name" maxlength="50" size="30">
-    	 </td>
-    	</tr>
-    	<tr>
-    	 <td valign="top">
-    	  <label style="color: white;" for="email">Email Address *</label>
-    	 </td>
-    	 <td valign="top">
-    	  <input  class="form-control" type="text" name="email" maxlength="80" size="30">
+    	  <input  class="form-control" type="text" name="subject" maxlength="50" size="30">
     	 </td>
     	</tr>
     	<tr>
     	 <td valign="top">
-    	  <label style="color: white;" for="telephone">Telephone Number</label>
+    	  <label style="color: white;" for="content">Content:</label>
     	 </td>
     	 <td valign="top">
-    	  <input  class="form-control" type="text" name="telephone" maxlength="30" size="30">
-    	 </td>
-    	</tr>
-    	<tr>
-    	 <td valign="top">
-    	  <label style="color: white;" for="comments">Comments *</label>
-    	 </td>
-    	 <td valign="top">
-    	  <textarea  class="form-control" name="comments" maxlength="1000" cols="25" rows="6"></textarea>
+    	  <textarea  class="form-control" name="content" maxlength="1000" cols="25" rows="6"></textarea>
     	 </td>
     	</tr>
     	<tr>
