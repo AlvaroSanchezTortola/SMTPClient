@@ -86,7 +86,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                     $data = receive($server_socket);
                     if (strpos($data, '354') !== false){
                         //echo "Read 354 DATA";
-                        $mail_content = $subject."\n".$content;
+                        $mail_content = "Subject: ".$subject."\n".$content;
                         send($server_socket, $mail_content);
                         send($server_socket, ".\r\n");
                         $data = receive($server_socket);
