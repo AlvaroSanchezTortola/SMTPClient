@@ -72,7 +72,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         $data = receive($server_socket);
         if (strpos($data, '250') !== false){
             //echo "Read 250 HELO\n";
-            send($server_socket, "MAIL FROM:".$mail_from);
+            send($server_socket, "MAIL FROM:".$mail_from."@mail.com");
             $data = receive($server_socket);
             if (strpos($data, '250') !== false){
                 //echo "Read 250 MAIL FROM\n";
