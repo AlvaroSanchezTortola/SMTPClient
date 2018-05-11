@@ -52,6 +52,7 @@ function receive($socket){
 }
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
+    syslog(LOG_INFO, 'INFO: Attempting to send mail.');
 	// validation expected data exists
     if(!isset($_POST['rcpt_to']) ||
         !isset($_POST['subject']) ||
