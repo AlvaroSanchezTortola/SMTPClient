@@ -26,7 +26,9 @@ function SocketConnect($server_ip, $server_port){
 	}
 	 
 	if (($connection = socket_connect($socket, $server_ip, $server_port)) === false) {
+        syslog(LOG_ERR, 'ERROR: Could not connect to server.');
 	    $msg_status = $msg_status . "Could not connect to server\n";
+        return 0;
 	}else{
         syslog(LOG_INFO, 'INFO: Socket succesfully connected.');
 		$msg_status = $msg_status . "Succesfully connected!!\n";
@@ -40,6 +42,7 @@ function send($socket, $message){
 
 function receive($socket){
     if (($data = socket_read($socket, 1024)) === false) {
+        syslog(LOG_ERR, 'ERROR: Could not read input from socket.');
         $msg_status = $msg_status . "Could not read input\n";
         return 0;
     } else {
@@ -67,44 +70,52 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     // echo "To: "."$rcpt_to\n";
     // echo "Subject: "."$subject\n";
     // echo "Content: "."$content\n";
-    
     $server_socket = SocketConnect($server_ip, $server_port);
-
-    $data = receive($server_socket);
-    if (strpos($data, '220') !== false) {
-        //echo "Read 220\n";
-        send($server_socket, "HELO");
+    if($server_socket!==0){
+        syslog(LOG_INFO, 'INFO: Starting SMTP transmission.');
         $data = receive($server_socket);
-        if (strpos($data, '250') !== false){
-            //echo "Read 250 HELO\n";
-            send($server_socket, "MAIL FROM:".$mail_from."@mail.com");
+        if (strpos($data, '220') !== false) {
+            send($server_socket, "HELO");
             $data = receive($server_socket);
             if (strpos($data, '250') !== false){
-                //echo "Read 250 MAIL FROM\n";
-                for($x = 0; $x < count($rcpt_to_array); $x++) {
-                    send($server_socket, "RCPT TO:".$rcpt_to_array[$x]);
-                    $data = receive($server_socket);
-                }
+                send($server_socket, "MAIL FROM:".$mail_from."@mail.com");
+                $data = receive($server_socket);
                 if (strpos($data, '250') !== false){
-                    //echo "Read 250 RCPT TO\n";
-                    send($server_socket, "DATA");
-                    $data = receive($server_socket);
-                    if (strpos($data, '354') !== false){
-                        //echo "Read 354 DATA";
-                        $mail_content = "Subject: ".$subject."\n".$content;
-                        send($server_socket, $mail_content);
-                        send($server_socket, ".\r\n");
+                    for($x = 0; $x < count($rcpt_to_array); $x++) {
+                        send($server_socket, "RCPT TO:".$rcpt_to_array[$x]);
                         $data = receive($server_socket);
-                        if (strpos($data, '250') !== false){
-                            //echo "Read 250 DONE!";
-                            $msg_status = $msg_status . "SENT!";
-                        }
                     }
+                    if (strpos($data, '250') !== false){
+                        send($server_socket, "DATA");
+                        $data = receive($server_socket);
+                        if (strpos($data, '354') !== false){
+                            $mail_content = "Subject: ".$subject."\n".$content;
+                            send($server_socket, $mail_content);
+                            send($server_socket, ".\r\n");
+                            $data = receive($server_socket);
+                            if (strpos($data, '250') !== false){
+                                syslog(LOG_INFO, 'INFO: Finished SMTP transmission succesfully.');
+                                $msg_status = $msg_status . "SENT!";
+                            }else{
+                                syslog(LOG_ERR, 'ERROR: Did not receive answer for finish.');
+                            }
+                        }else{
+                            syslog(LOG_ERR, 'ERROR: Did not receive answer for DATA.');
+                        }
+                    }else{
+                        syslog(LOG_ERR, 'ERROR: Did not receive answer for RCPT TO.');
+                    }
+                }else{
+                    syslog(LOG_ERR, 'ERROR: Did not receive answer for MAIL FROM.');
                 }
+            }else{
+                syslog(LOG_ERR, 'ERROR: Did not receive answer for HELO.');
             }
+        }else{
+            syslog(LOG_ERR, 'ERROR: Did not receive first message from server.');
         }
-    }
-    socket_close($server_socket);
+        socket_close($server_socket);
+    }   
 }
 ?>
 
