@@ -1,30 +1,34 @@
 <?php
-
+openlog('smtp_php', LOG_CONS | LOG_NDELAY | LOG_PID, LOG_USER | LOG_PERROR);
 // Initialize the session
 session_start();
 
 // If session variable is not set it will redirect to login page
 if(!isset($_SESSION['username']) || empty($_SESSION['username'])){
+  syslog(LOG_ERR, 'ERROR: Attempt to access unauthorized session.');
   header("location: login.php");
   exit;
 }
 
 $msg_status = "";
 $server_ip = "127.0.0.1";
-$server_port = 666;
+$server_port = 25;
 
 function SocketConnect($server_ip, $server_port){
 	set_time_limit(5);
 	 
 	if (($socket = socket_create(AF_INET, SOCK_STREAM, 0)) === false) {
+        syslog(LOG_ERR, 'ERROR: Could not create socket.');
 	    $msg_status = $msg_status . "Could not create socket\n";
 	}else{
-		$msg_status = $msg_status . "Socket created succesfuly!\n";
+        syslog(LOG_INFO, 'INFO: Socket created succesfully');
+		$msg_status = $msg_status . "Socket created succesfully!\n";
 	}
 	 
 	if (($connection = socket_connect($socket, $server_ip, $server_port)) === false) {
 	    $msg_status = $msg_status . "Could not connect to server\n";
 	}else{
+        syslog(LOG_INFO, 'INFO: Socket succesfully connected.');
 		$msg_status = $msg_status . "Succesfully connected!!\n";
         return $socket;
 	}
@@ -49,6 +53,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     if(!isset($_POST['rcpt_to']) ||
         !isset($_POST['subject']) ||
         !isset($_POST['content'])) {
+        syslog(LOG_WARNING, 'WARNING: Empty fields in form.');
         $msg_status = $msg_status . "We are sorry, but there appears to be a problem with the form you submitted\n";       
     }
     $rcpt_to = $_POST['rcpt_to']; // required

@@ -15,6 +15,12 @@ then, install all `apache` and `PHP` dependencies:
 sudo apt-get install php libapache2-mod-php php-mcrypt php-mysql
 ```
 finally, locate the files in `/var/www/html`.
+#### Logging
+Uncomment the next line in `/etc/php/7.0/cli/php.ini`:
+``` ini
+; Log errors to syslog (Event Log on Windows).
+error_log = syslog
+```
 ## Run
 Access the client in
 ```http
