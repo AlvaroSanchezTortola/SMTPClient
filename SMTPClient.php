@@ -12,7 +12,7 @@ if(!isset($_SESSION['username']) || empty($_SESSION['username'])){
 
 $GLOBALS["msg_status"] = "";
 $server_ip = "127.0.0.1";
-$server_port = 2526;
+$server_port = 25;
 $regex_message = "/[^a-z_0-9@,:.*!¿¡?()&%$#\" ]/i";
 $regex_rcpt = "/[^a-z_0-9@,.()\" ]/i";
 
