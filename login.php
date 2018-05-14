@@ -11,7 +11,7 @@
     $regex = '/[^a-z_0-9]/i';
     
     if($_SESSION['banned']=== true){
-        sleep(10);
+        sleep(30);
         $_SESSION['banned']=false;
     }
 
