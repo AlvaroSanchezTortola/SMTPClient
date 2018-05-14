@@ -1,5 +1,5 @@
 <?php
-openlog('smtp_php', LOG_CONS | LOG_NDELAY | LOG_PID, LOG_USER | LOG_PERROR);
+openlog('smtp_php_client', LOG_CONS | LOG_NDELAY | LOG_PID, LOG_USER | LOG_PERROR);
 // Initialize the session
 session_start();
 
@@ -10,28 +10,30 @@ if(!isset($_SESSION['username']) || empty($_SESSION['username'])){
   exit;
 }
 
-$msg_status = "";
+$GLOBALS["msg_status"] = "";
 $server_ip = "127.0.0.1";
-$server_port = 25;
+$server_port = 2526;
+$regex_message = "/[^a-z_0-9@,:.*!¿¡?()&%$#\" ]/i";
+$regex_rcpt = "/[^a-z_0-9@,.()\" ]/i";
 
 function SocketConnect($server_ip, $server_port){
 	set_time_limit(5);
 	 
 	if (($socket = socket_create(AF_INET, SOCK_STREAM, 0)) === false) {
         syslog(LOG_ERR, 'ERROR: Could not create socket.');
-	    $msg_status = $msg_status . "Could not create socket\n";
+	    $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nCould not create socket<br>\n";
 	}else{
         syslog(LOG_INFO, 'INFO: Socket created succesfully');
-		$msg_status = $msg_status . "Socket created succesfully!\n";
+		$GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nSocket created succesfully!<br>\n";
 	}
 	 
 	if (($connection = socket_connect($socket, $server_ip, $server_port)) === false) {
         syslog(LOG_ERR, 'ERROR: Could not connect to server.');
-	    $msg_status = $msg_status . "Could not connect to server\n";
+	    $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nCould not connect to server<br>\n";
         return 0;
 	}else{
         syslog(LOG_INFO, 'INFO: Socket succesfully connected.');
-		$msg_status = $msg_status . "Succesfully connected!!\n";
+		$GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nSuccesfully connected!!<br>\n";
         return $socket;
 	}
 }
@@ -43,10 +45,9 @@ function send($socket, $message){
 function receive($socket){
     if (($data = socket_read($socket, 1024)) === false) {
         syslog(LOG_ERR, 'ERROR: Could not read input from socket.');
-        $msg_status = $msg_status . "Could not read input\n";
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nCould not read input\n";
         return 0;
     } else {
-        //echo "Server sent:" . $data . "\n";
         return $data;
     }
 }
@@ -58,64 +59,79 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         !isset($_POST['subject']) ||
         !isset($_POST['content'])) {
         syslog(LOG_WARNING, 'WARNING: Empty fields in form.');
-        $msg_status = $msg_status . "We are sorry, but there appears to be a problem with the form you submitted\n";       
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nWe are sorry, but there appears to be a problem with the form you submitted\n";       
     }
-    $rcpt_to = $_POST['rcpt_to']; // required
-    $subject = $_POST['subject']; // required
-    $content = $_POST['content']; // required
-    $mail_from = $_SESSION['username'];
+    elseif (preg_match($regex_rcpt, $_POST["rcpt_to"])) {
+        syslog(LOG_WARNING, 'WARNING: Extraneous characters in receipt field.');
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nExtraneous characters in receipt field\n";
+    }elseif (preg_match($regex_message, $_POST["subject"])) {
+        syslog(LOG_WARNING, 'WARNING: Extraneous characters in subject field.');
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nExtraneous characters in subject field\n";
+    }elseif (preg_match($regex_message, $_POST["content"])) {
+        syslog(LOG_WARNING, 'WARNING: Extraneous characters in content field.');
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nExtraneous characters in content field\n";
+    }elseif (empty($_POST['rcpt_to']) ||
+             empty($_POST['subject']) ||
+             empty($_POST['content'])) {
+        syslog(LOG_WARNING, 'WARNING: Empty fields in form.');
+        $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\nSome fields are empty, please try again!\n";
+    }
 
-    $rcpt_to_array = explode(",",$rcpt_to);
+    if(empty($GLOBALS["msg_status"])){
+        $rcpt_to = $_POST['rcpt_to']; 
+        $subject = $_POST['subject'];
+        $content = $_POST['content']; 
+        $mail_from = $_SESSION['username'];
 
-    // echo "From: "."$mail_from\n";
-    // echo "To: "."$rcpt_to\n";
-    // echo "Subject: "."$subject\n";
-    // echo "Content: "."$content\n";
-    $server_socket = SocketConnect($server_ip, $server_port);
-    if($server_socket!==0){
-        syslog(LOG_INFO, 'INFO: Starting SMTP transmission.');
-        $data = receive($server_socket);
-        if (strpos($data, '220') !== false) {
-            send($server_socket, "HELO");
+        $rcpt_to_array = explode(",",$rcpt_to);
+
+        $server_socket = SocketConnect($server_ip, $server_port);
+        if($server_socket!==0){
+            syslog(LOG_INFO, 'INFO: Starting SMTP transmission.');
             $data = receive($server_socket);
-            if (strpos($data, '250') !== false){
-                send($server_socket, "MAIL FROM:".$mail_from."@mail.com");
+            if (strpos($data, '220') !== false) {
+                send($server_socket, "HELO");
                 $data = receive($server_socket);
                 if (strpos($data, '250') !== false){
-                    for($x = 0; $x < count($rcpt_to_array); $x++) {
-                        send($server_socket, "RCPT TO:".$rcpt_to_array[$x]);
-                        $data = receive($server_socket);
-                    }
+                    send($server_socket, "MAIL FROM:".$mail_from."@mail.com");
+                    $data = receive($server_socket);
                     if (strpos($data, '250') !== false){
-                        send($server_socket, "DATA");
-                        $data = receive($server_socket);
-                        if (strpos($data, '354') !== false){
-                            $mail_content = "Subject: ".$subject."\n".$content;
-                            send($server_socket, $mail_content);
-                            send($server_socket, ".\r\n");
+                        for($x = 0; $x < count($rcpt_to_array); $x++) {
+                            send($server_socket, "RCPT TO:".$rcpt_to_array[$x]);
                             $data = receive($server_socket);
-                            if (strpos($data, '250') !== false){
-                                syslog(LOG_INFO, 'INFO: Finished SMTP transmission succesfully.');
-                                $msg_status = $msg_status . "SENT!";
+                        }
+                        if (strpos($data, '250') !== false){
+                            send($server_socket, "DATA");
+                            $data = receive($server_socket);
+                            if (strpos($data, '354') !== false){
+                                $mail_content = "Subject: ".$subject."\n".$content;
+                                send($server_socket, $mail_content);
+                                send($server_socket, ".\r\n");
+                                $data = receive($server_socket);
+                                if (strpos($data, '250') !== false){
+                                    syslog(LOG_INFO, 'INFO: Finished SMTP transmission succesfully.');
+                                    $GLOBALS["msg_status"] = $GLOBALS["msg_status"] . "\n** SUCCESFULLY SENT!**";
+                                }else{
+                                    syslog(LOG_ERR, 'ERROR: Did not receive answer for finish.');
+                                }
                             }else{
-                                syslog(LOG_ERR, 'ERROR: Did not receive answer for finish.');
+                                syslog(LOG_ERR, 'ERROR: Did not receive answer for DATA.');
                             }
                         }else{
-                            syslog(LOG_ERR, 'ERROR: Did not receive answer for DATA.');
+                            syslog(LOG_ERR, 'ERROR: Did not receive answer for RCPT TO.');
                         }
                     }else{
-                        syslog(LOG_ERR, 'ERROR: Did not receive answer for RCPT TO.');
+                        syslog(LOG_ERR, 'ERROR: Did not receive answer for MAIL FROM.');
                     }
                 }else{
-                    syslog(LOG_ERR, 'ERROR: Did not receive answer for MAIL FROM.');
+                    syslog(LOG_ERR, 'ERROR: Did not receive answer for HELO.');
                 }
             }else{
-                syslog(LOG_ERR, 'ERROR: Did not receive answer for HELO.');
+                syslog(LOG_ERR, 'ERROR: Did not receive first message from server.');
             }
-        }else{
-            syslog(LOG_ERR, 'ERROR: Did not receive first message from server.');
-        }
         socket_close($server_socket);
+        syslog(LOG_INFO, 'INFO: Socket closed.');    
+        }
     }   
 }
 ?>
@@ -164,12 +180,12 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     	</tr>
     	<tr>
     	 <td colspan="2" style="text-align:center">
-    	  <input style="position: relative; left: 80px; width: 200px;" type="submit" class="btn btn-primary" value="Send Mail">
+    	  <input style="position: relative; left: 35px; width: 320px;" type="submit" class="btn btn-primary" value="Send Mail">
     	 </td>
     	</tr>
     	</table>
     	</form>
-    	<span style="position: relative;left: 70%;font-weight: bold; color: #4cda4f;" class="text-success"><?php echo $msg_status; ?>   
+    	<span style="position: relative;left: 35%;font-weight: bold; color: #4cda4f;" class="text-success" ><?php echo $GLOBALS["msg_status"]; ?>   
         </span>
     </div>    
 </body>
